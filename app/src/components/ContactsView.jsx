@@ -20,7 +20,13 @@ const emptyForm = {
 export default function ContactsView({ contacts, loading, openContact, reload, showToast }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [industryFilter, setIndustryFilter] = useState('All')
   const [showAddModal, setShowAddModal] = useState(false)
+
+  const industriesPresent = useMemo(() => {
+    const set = new Set(contacts.map((c) => c.company_industry).filter(Boolean))
+    return INDUSTRY_OPTIONS.filter((i) => set.has(i))
+  }, [contacts])
 
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
@@ -30,9 +36,10 @@ export default function ContactsView({ contacts, loading, openContact, reload, s
         c.company_name?.toLowerCase().includes(search.toLowerCase()) ||
         c.email?.toLowerCase().includes(search.toLowerCase())
       const matchesStatus = statusFilter === 'All' || c.status === statusFilter
-      return matchesSearch && matchesStatus
+      const matchesIndustry = industryFilter === 'All' || c.company_industry === industryFilter
+      return matchesSearch && matchesStatus && matchesIndustry
     })
-  }, [contacts, search, statusFilter])
+  }, [contacts, search, statusFilter, industryFilter])
 
   return (
     <div>
@@ -72,6 +79,12 @@ export default function ContactsView({ contacts, loading, openContact, reload, s
           <option>All</option>
           {STATUS_OPTIONS.map((s) => (
             <option key={s}>{s}</option>
+          ))}
+        </select>
+        <select value={industryFilter} onChange={(e) => setIndustryFilter(e.target.value)} style={inputStyle({ width: 200 })}>
+          <option value="All">All Industries</option>
+          {industriesPresent.map((i) => (
+            <option key={i} value={i}>{i}</option>
           ))}
         </select>
       </div>

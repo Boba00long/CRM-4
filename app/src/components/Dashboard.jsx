@@ -1,16 +1,27 @@
-import { useState } from 'react'
-import { STATUS_OPTIONS, formatDate, isOverdue } from '../lib/constants'
+import { useState, useMemo } from 'react'
+import { STATUS_OPTIONS, INDUSTRY_OPTIONS, formatDate, isOverdue } from '../lib/constants'
 import SequenceRail from './SequenceRail'
 
 export default function Dashboard({ contacts, loading, openContact, setView }) {
   const [collapsed, setCollapsed] = useState({})
+  const [industryFilter, setIndustryFilter] = useState('All')
+
+  const industriesPresent = useMemo(() => {
+    const set = new Set(contacts.map((c) => c.company_industry).filter(Boolean))
+    return INDUSTRY_OPTIONS.filter((i) => set.has(i))
+  }, [contacts])
+
+  const filteredContacts = useMemo(() => {
+    if (industryFilter === 'All') return contacts
+    return contacts.filter((c) => c.company_industry === industryFilter)
+  }, [contacts, industryFilter])
 
   const byStatus = STATUS_OPTIONS.reduce((acc, status) => {
-    acc[status] = contacts.filter((c) => c.status === status)
+    acc[status] = filteredContacts.filter((c) => c.status === status)
     return acc
   }, {})
 
-  const overdueCount = contacts.filter((c) => isOverdue(c.next_action_date)).length
+  const overdueCount = filteredContacts.filter((c) => isOverdue(c.next_action_date)).length
 
   const toggleCollapsed = (status) => {
     setCollapsed((c) => ({ ...c, [status]: !c[status] }))
@@ -18,24 +29,54 @@ export default function Dashboard({ contacts, loading, openContact, setView }) {
 
   return (
     <div>
-      <header style={{ marginBottom: 32 }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 32, margin: 0, color: 'var(--color-paper)' }}>
-          Pipeline
-        </h1>
-        <p style={{ color: 'var(--color-text-secondary)', marginTop: 6, fontSize: 14.5 }}>
-          {contacts.length} total contacts
-          {overdueCount > 0 && (
-            <span style={{ color: 'var(--color-danger)', marginLeft: 10 }}>
-              · {overdueCount} overdue for action
-            </span>
-          )}
-        </p>
+      <header style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 32, margin: 0, color: 'var(--color-paper)' }}>
+            Pipeline
+          </h1>
+          <p style={{ color: 'var(--color-text-secondary)', marginTop: 6, fontSize: 14.5 }}>
+            {filteredContacts.length} {industryFilter !== 'All' ? `of ${contacts.length} ` : ''}contacts
+            {overdueCount > 0 && (
+              <span style={{ color: 'var(--color-danger)', marginLeft: 10 }}>
+                · {overdueCount} overdue for action
+              </span>
+            )}
+          </p>
+        </div>
+
+        {contacts.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12.5, color: 'var(--color-text-muted)' }}>Industry</span>
+            <select
+              value={industryFilter}
+              onChange={(e) => setIndustryFilter(e.target.value)}
+              style={{
+                background: 'var(--color-panel)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '8px 12px',
+                color: 'var(--color-text)',
+                fontSize: 13.5,
+                minWidth: 200,
+              }}
+            >
+              <option value="All">All Industries</option>
+              {industriesPresent.map((i) => (
+                <option key={i} value={i}>{i}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </header>
 
       {loading ? (
         <div style={{ color: 'var(--color-text-muted)' }}>Loading…</div>
       ) : contacts.length === 0 ? (
         <EmptyState setView={setView} />
+      ) : filteredContacts.length === 0 ? (
+        <div style={{ color: 'var(--color-text-muted)', fontSize: 14, padding: '24px 0' }}>
+          No contacts match the "{industryFilter}" filter.
+        </div>
       ) : (
         <div
           style={{
