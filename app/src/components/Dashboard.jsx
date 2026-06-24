@@ -47,24 +47,43 @@ export default function Dashboard({ contacts, loading, openContact, setView }) {
         {contacts.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 12.5, color: 'var(--color-text-muted)' }}>Industry</span>
-            <select
-              value={industryFilter}
-              onChange={(e) => setIndustryFilter(e.target.value)}
-              style={{
-                background: 'var(--color-panel)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '8px 12px',
-                color: 'var(--color-text)',
-                fontSize: 13.5,
-                minWidth: 200,
-              }}
-            >
-              <option value="All">All Industries</option>
-              {industriesPresent.map((i) => (
-                <option key={i} value={i}>{i}</option>
-              ))}
-            </select>
+            <div style={{ position: 'relative' }}>
+              <select
+                value={industryFilter}
+                onChange={(e) => setIndustryFilter(e.target.value)}
+                style={{
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  background: 'var(--color-panel)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '8px 36px 8px 12px',
+                  color: 'var(--color-text)',
+                  fontSize: 13.5,
+                  minWidth: 200,
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="All">All Industries</option>
+                {industriesPresent.map((i) => (
+                  <option key={i} value={i}>{i}</option>
+                ))}
+              </select>
+              <span
+                style={{
+                  position: 'absolute',
+                  right: 12,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  fontSize: 10,
+                  color: 'var(--color-text-muted)',
+                  pointerEvents: 'none',
+                }}
+              >
+                ▾
+              </span>
+            </div>
           </div>
         )}
       </header>
@@ -78,26 +97,41 @@ export default function Dashboard({ contacts, loading, openContact, setView }) {
           No contacts match the "{industryFilter}" filter.
         </div>
       ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: STATUS_OPTIONS.map((s) => (collapsed[s] ? '56px' : 'minmax(220px, 1fr)')).join(' '),
-            gap: 16,
-            alignItems: 'start',
-            transition: 'grid-template-columns 0.2s ease',
-          }}
-        >
-          {STATUS_OPTIONS.map((status) => (
-            <StatusColumn
-              key={status}
-              status={status}
-              contacts={byStatus[status]}
-              openContact={openContact}
-              isCollapsed={!!collapsed[status]}
-              onToggle={() => toggleCollapsed(status)}
-            />
-          ))}
-        </div>
+        <>
+          {STATUS_OPTIONS.some((s) => collapsed[s]) && (
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+              {STATUS_OPTIONS.filter((s) => collapsed[s]).map((status) => (
+                <StatusColumn
+                  key={status}
+                  status={status}
+                  contacts={byStatus[status]}
+                  openContact={openContact}
+                  isCollapsed={true}
+                  onToggle={() => toggleCollapsed(status)}
+                />
+              ))}
+            </div>
+          )}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${STATUS_OPTIONS.filter((s) => !collapsed[s]).length || 1}, minmax(220px, 1fr))`,
+              gap: 16,
+              alignItems: 'start',
+            }}
+          >
+            {STATUS_OPTIONS.filter((s) => !collapsed[s]).map((status) => (
+              <StatusColumn
+                key={status}
+                status={status}
+                contacts={byStatus[status]}
+                openContact={openContact}
+                isCollapsed={false}
+                onToggle={() => toggleCollapsed(status)}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
@@ -107,47 +141,33 @@ function StatusColumn({ status, contacts, openContact, isCollapsed, onToggle }) 
   if (isCollapsed) {
     return (
       <div
+        onClick={onToggle}
+        title={`Expand ${status}`}
         style={{
           background: 'var(--color-surface)',
           borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--color-border)',
-          padding: '14px 8px',
-          minHeight: 200,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          padding: '10px 12px',
           cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
         }}
-        onClick={onToggle}
-        title={`Expand ${status}`}
       >
-        <button
-          aria-label={`Expand ${status}`}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--color-text-muted)',
-            fontSize: 14,
-            padding: 4,
-            marginBottom: 12,
-          }}
-        >
-          ▸
-        </button>
-        <div
+        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>▸</span>
+        <span
           style={{
             fontSize: 12,
             fontWeight: 600,
             color: 'var(--color-text-secondary)',
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
-            writingMode: 'vertical-rl',
-            textOrientation: 'mixed',
+            whiteSpace: 'nowrap',
           }}
         >
           {status}
-        </div>
-        <span style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 12 }}>{contacts.length}</span>
+        </span>
+        <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>{contacts.length}</span>
       </div>
     )
   }
