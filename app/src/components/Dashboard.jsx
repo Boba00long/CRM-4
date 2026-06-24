@@ -1,13 +1,20 @@
+import { useState } from 'react'
 import { STATUS_OPTIONS, formatDate, isOverdue } from '../lib/constants'
 import SequenceRail from './SequenceRail'
 
 export default function Dashboard({ contacts, loading, openContact, setView }) {
+  const [collapsed, setCollapsed] = useState({})
+
   const byStatus = STATUS_OPTIONS.reduce((acc, status) => {
     acc[status] = contacts.filter((c) => c.status === status)
     return acc
   }, {})
 
   const overdueCount = contacts.filter((c) => isOverdue(c.next_action_date)).length
+
+  const toggleCollapsed = (status) => {
+    setCollapsed((c) => ({ ...c, [status]: !c[status] }))
+  }
 
   return (
     <div>
@@ -33,8 +40,10 @@ export default function Dashboard({ contacts, loading, openContact, setView }) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(5, minmax(220px, 1fr))',
+            gridTemplateColumns: STATUS_OPTIONS.map((s) => (collapsed[s] ? '56px' : 'minmax(220px, 1fr)')).join(' '),
             gap: 16,
+            alignItems: 'start',
+            transition: 'grid-template-columns 0.2s ease',
           }}
         >
           {STATUS_OPTIONS.map((status) => (
@@ -43,6 +52,8 @@ export default function Dashboard({ contacts, loading, openContact, setView }) {
               status={status}
               contacts={byStatus[status]}
               openContact={openContact}
+              isCollapsed={!!collapsed[status]}
+              onToggle={() => toggleCollapsed(status)}
             />
           ))}
         </div>
@@ -51,7 +62,55 @@ export default function Dashboard({ contacts, loading, openContact, setView }) {
   )
 }
 
-function StatusColumn({ status, contacts, openContact }) {
+function StatusColumn({ status, contacts, openContact, isCollapsed, onToggle }) {
+  if (isCollapsed) {
+    return (
+      <div
+        style={{
+          background: 'var(--color-surface)',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--color-border)',
+          padding: '14px 8px',
+          minHeight: 200,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          cursor: 'pointer',
+        }}
+        onClick={onToggle}
+        title={`Expand ${status}`}
+      >
+        <button
+          aria-label={`Expand ${status}`}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--color-text-muted)',
+            fontSize: 14,
+            padding: 4,
+            marginBottom: 12,
+          }}
+        >
+          ▸
+        </button>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--color-text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            writingMode: 'vertical-rl',
+            textOrientation: 'mixed',
+          }}
+        >
+          {status}
+        </div>
+        <span style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 12 }}>{contacts.length}</span>
+      </div>
+    )
+  }
+
   return (
     <div
       style={{
@@ -63,6 +122,7 @@ function StatusColumn({ status, contacts, openContact }) {
       }}
     >
       <div
+        onClick={onToggle}
         style={{
           fontSize: 12.5,
           fontWeight: 600,
@@ -72,9 +132,14 @@ function StatusColumn({ status, contacts, openContact }) {
           marginBottom: 12,
           display: 'flex',
           justifyContent: 'space-between',
+          alignItems: 'center',
+          cursor: 'pointer',
         }}
       >
-        <span>{status}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>▾</span>
+          {status}
+        </span>
         <span style={{ color: 'var(--color-text-muted)' }}>{contacts.length}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
