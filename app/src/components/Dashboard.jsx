@@ -1,10 +1,33 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 import { STATUS_OPTIONS, INDUSTRY_OPTIONS, formatDate, isOverdue } from '../lib/constants'
 import SequenceRail from './SequenceRail'
 
 export default function Dashboard({ contacts, loading, openContact, setView }) {
   const [collapsed, setCollapsed] = useState({})
   const [industryFilter, setIndustryFilter] = useState('All')
+  const [todayStats, setTodayStats] = useState({ Email: 0, Call: 0, Meeting: 0, Other: 0, loading: true })
+
+  useEffect(() => {
+    const loadTodayStats = async () => {
+      const startOfDay = new Date()
+      startOfDay.setHours(0, 0, 0, 0)
+      const { data, error } = await supabase
+        .from('interactions')
+        .select('type')
+        .gte('occurred_at', startOfDay.toISOString())
+      if (!error && data) {
+        const counts = { Email: 0, Call: 0, Meeting: 0, Other: 0 }
+        data.forEach((row) => {
+          if (counts[row.type] !== undefined) counts[row.type] += 1
+        })
+        setTodayStats({ ...counts, loading: false })
+      } else {
+        setTodayStats((s) => ({ ...s, loading: false }))
+      }
+    }
+    loadTodayStats()
+  }, [contacts])
 
   const industriesPresent = useMemo(() => {
     const set = new Set(contacts.map((c) => c.company_industry).filter(Boolean))
@@ -29,6 +52,8 @@ export default function Dashboard({ contacts, loading, openContact, setView }) {
 
   return (
     <div>
+      {contacts.length > 0 && <TodayActivity stats={todayStats} />}
+
       <header style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 32, margin: 0, color: 'var(--color-paper)' }}>
@@ -133,6 +158,52 @@ export default function Dashboard({ contacts, loading, openContact, setView }) {
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+function TodayActivity({ stats }) {
+  const items = [
+    { key: 'Email', label: 'Emails Sent', icon: '✉' },
+    { key: 'Call', label: 'Calls Made', icon: '☎' },
+    { key: 'Meeting', label: 'Meetings', icon: '◔' },
+    { key: 'Other', label: 'Other Touches', icon: '◈' },
+  ]
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: 14,
+        marginBottom: 24,
+        flexWrap: 'wrap',
+      }}
+    >
+      {items.map((item) => (
+        <div
+          key={item.key}
+          style={{
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            minWidth: 140,
+          }}
+        >
+          <span style={{ fontSize: 16, color: 'var(--color-gold)' }}>{item.icon}</span>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-paper)', lineHeight: 1 }}>
+              {stats.loading ? '–' : stats[item.key]}
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)', marginTop: 2, whiteSpace: 'nowrap' }}>
+              {item.label} Today
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
