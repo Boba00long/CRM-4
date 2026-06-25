@@ -215,15 +215,9 @@ export default function ContactDetail({ contactId, onBack, reload, showToast }) 
                         <span style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--color-gold)' }}>{i.type}</span>
                         {i.gmail_message_id && (
                           <>
-                            {i.opened_at ? (
-                              <span style={{ fontSize: 11, color: 'var(--color-success)', background: 'var(--color-success-bg)', padding: '2px 7px', borderRadius: 10, fontWeight: 600 }}>
-                                ✓ Opened
-                              </span>
-                            ) : (
-                              <span style={{ fontSize: 11, color: 'var(--color-text-muted)', background: 'var(--color-panel)', padding: '2px 7px', borderRadius: 10, fontWeight: 600 }}>
-                                Sent
-                              </span>
-                            )}
+                            <span style={{ fontSize: 11, color: 'var(--color-text-muted)', background: 'var(--color-panel)', padding: '2px 7px', borderRadius: 10, fontWeight: 600 }}>
+                              Sent via Gmail
+                            </span>
                             {i.replied_at && (
                               <span style={{ fontSize: 11, color: 'var(--color-info)', background: 'rgba(96,165,250,0.12)', padding: '2px 7px', borderRadius: 10, fontWeight: 600 }}>
                                 ↩ Replied

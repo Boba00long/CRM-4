@@ -63,9 +63,7 @@ export default async function handler(req, res) {
       return
     }
 
-    const baseUrl = getBaseUrl(req)
-    const pixelUrl = `${baseUrl}/api/webhooks/pixel?id=${interaction.tracking_id}`
-    const htmlBody = `${body.replace(/\n/g, '<br>')}<img src="${pixelUrl}" width="1" height="1" style="display:none" alt="" />`
+    const htmlBody = body.replace(/\n/g, '<br>')
 
     const rawMessage = buildRawMessage({ to, subject, htmlBody })
 
@@ -119,10 +117,4 @@ function buildRawMessage({ to, subject, htmlBody }) {
   ]
   const message = messageParts.join('\n')
   return Buffer.from(message).toString('base64url')
-}
-
-function getBaseUrl(req) {
-  const proto = req.headers['x-forwarded-proto'] || 'https'
-  const host = req.headers['x-forwarded-host'] || req.headers.host
-  return `${proto}://${host}`
 }
