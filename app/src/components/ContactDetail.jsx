@@ -160,8 +160,10 @@ export default function ContactDetail({ contactId, onBack, reload, showToast }) 
           <button onClick={deleteContact} style={dangerBtnStyle}>Delete Contact</button>
         </div>
 
-        {/* Right column: log interaction + history */}
+        {/* Right column: send email + log interaction + history */}
         <div>
+          {contact.email && <SendEmailPanel contact={contact} onSent={() => { load(); reload() }} showToast={showToast} />}
+
           <Panel title="Log an Interaction">
             <form onSubmit={logInteraction} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -208,12 +210,33 @@ export default function ContactDetail({ contactId, onBack, reload, showToast }) 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {interactions.map((i) => (
                   <div key={i.id} style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--color-gold)' }}>{i.type}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--color-gold)' }}>{i.type}</span>
+                        {i.gmail_message_id && (
+                          <>
+                            {i.opened_at ? (
+                              <span style={{ fontSize: 11, color: 'var(--color-success)', background: 'var(--color-success-bg)', padding: '2px 7px', borderRadius: 10, fontWeight: 600 }}>
+                                ✓ Opened
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: 11, color: 'var(--color-text-muted)', background: 'var(--color-panel)', padding: '2px 7px', borderRadius: 10, fontWeight: 600 }}>
+                                Sent
+                              </span>
+                            )}
+                            {i.replied_at && (
+                              <span style={{ fontSize: 11, color: 'var(--color-info)', background: 'rgba(96,165,250,0.12)', padding: '2px 7px', borderRadius: 10, fontWeight: 600 }}>
+                                ↩ Replied
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </span>
                       <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
                         {new Date(i.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     </div>
+                    {i.subject && <p style={{ fontSize: 13, color: 'var(--color-text)', margin: '8px 0 0', fontWeight: 600 }}>{i.subject}</p>}
                     {i.notes && <p style={{ fontSize: 13.5, color: 'var(--color-text-secondary)', margin: '6px 0 0' }}>{i.notes}</p>}
                   </div>
                 ))}
@@ -223,6 +246,83 @@ export default function ContactDetail({ contactId, onBack, reload, showToast }) 
         </div>
       </div>
     </div>
+  )
+}
+
+function SendEmailPanel({ contact, onSent, showToast }) {
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
+  const [sending, setSending] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  const handleSend = async (e) => {
+    e.preventDefault()
+    if (!subject.trim() || !body.trim()) return
+    setSending(true)
+    try {
+      const res = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactId: contact.id, to: contact.email, subject, body }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        showToast(data.error || 'Failed to send email', 'error')
+      } else {
+        showToast('Email sent and logged')
+        setSubject('')
+        setBody('')
+        setExpanded(false)
+        onSent()
+      }
+    } catch (err) {
+      showToast('Failed to send email: ' + err.message, 'error')
+    }
+    setSending(false)
+  }
+
+  if (!expanded) {
+    return (
+      <button
+        onClick={() => setExpanded(true)}
+        style={{ ...primaryBtnStyle, marginBottom: 16, width: '100%' }}
+      >
+        ✉ Send Email to {contact.full_name.split(' ')[0]}
+      </button>
+    )
+  }
+
+  return (
+    <Panel title={`Send Email to ${contact.email}`}>
+      <form onSubmit={handleSend} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <input
+          placeholder="Subject"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          style={inputStyle()}
+          required
+        />
+        <textarea
+          placeholder="Write your message…"
+          rows={6}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          style={inputStyle({ resize: 'vertical' })}
+          required
+        />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button type="button" onClick={() => setExpanded(false)} style={{ ...secondaryBtnStyle, flex: 1 }}>
+            Cancel
+          </button>
+          <button type="submit" disabled={sending} style={{ ...primaryBtnStyle, flex: 2 }}>
+            {sending ? 'Sending…' : 'Send Email'}
+          </button>
+        </div>
+        <p style={{ fontSize: 11.5, color: 'var(--color-text-muted)', margin: 0 }}>
+          This sends through your connected Gmail account and logs it automatically, advancing the touch sequence.
+        </p>
+      </form>
+    </Panel>
   )
 }
 
@@ -328,6 +428,16 @@ const primaryBtnStyle = {
   padding: '11px 0',
   borderRadius: 'var(--radius-sm)',
   fontWeight: 600,
+  fontSize: 14,
+}
+
+const secondaryBtnStyle = {
+  background: 'transparent',
+  color: 'var(--color-text-secondary)',
+  border: '1px solid var(--color-border)',
+  padding: '11px 0',
+  borderRadius: 'var(--radius-sm)',
+  fontWeight: 500,
   fontSize: 14,
 }
 

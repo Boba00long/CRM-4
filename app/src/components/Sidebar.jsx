@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react'
+
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Pipeline', icon: '◈' },
   { key: 'contacts', label: 'All Contacts', icon: '☷' },
@@ -6,6 +8,21 @@ const NAV_ITEMS = [
 ]
 
 export default function Sidebar({ view, setView, contactCount }) {
+  const [gmailStatus, setGmailStatus] = useState({ loading: true, connected: false, email: null })
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const res = await fetch('/api/auth/google/status')
+        const data = await res.json()
+        setGmailStatus({ loading: false, connected: data.connected, email: data.email || null })
+      } catch {
+        setGmailStatus({ loading: false, connected: false, email: null })
+      }
+    }
+    checkStatus()
+  }, [])
+
   return (
     <aside
       style={{
@@ -84,8 +101,49 @@ export default function Sidebar({ view, setView, contactCount }) {
         )
       })}
 
-      <div style={{ marginTop: 'auto', paddingLeft: 8, fontSize: 11.5, color: 'var(--color-text-muted)' }}>
-        Six-touch outreach tracker
+      <div style={{ marginTop: 'auto' }}>
+        {gmailStatus.loading ? null : gmailStatus.connected ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 12px',
+              background: 'var(--color-success-bg)',
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: 12,
+            }}
+            title={gmailStatus.email}
+          >
+            <span style={{ color: 'var(--color-success)', fontSize: 13 }}>●</span>
+            <span style={{ fontSize: 12.5, color: 'var(--color-success)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              Gmail Connected
+            </span>
+          </div>
+        ) : (
+          <a
+            href="/api/auth/google/start"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              padding: '10px 12px',
+              background: 'var(--color-panel)',
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: 12,
+              fontSize: 12.5,
+              color: 'var(--color-gold)',
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+          >
+            Connect Gmail
+          </a>
+        )}
+        <div style={{ paddingLeft: 8, fontSize: 11.5, color: 'var(--color-text-muted)' }}>
+          Six-touch outreach tracker
+        </div>
       </div>
     </aside>
   )
