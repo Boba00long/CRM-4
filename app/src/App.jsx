@@ -6,6 +6,7 @@ import ContactsView from './components/ContactsView'
 import ContactDetail from './components/ContactDetail'
 import ImportView from './components/ImportView'
 import FollowUpsView from './components/FollowUpsView'
+import AnalyticsView from './components/AnalyticsView'
 
 export default function App() {
   const [view, setView] = useState('dashboard')
@@ -68,6 +69,7 @@ export default function App() {
         {view === 'followups' && (
           <FollowUpsView contacts={contacts} loading={loading} openContact={openContact} />
         )}
+        {view === 'analytics' && <AnalyticsView />}
       </main>
       {toast && (
         <div

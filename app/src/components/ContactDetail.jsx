@@ -32,6 +32,23 @@ export default function ContactDetail({ contactId, onBack, reload, showToast }) 
     load()
   }, [load])
 
+  // Passively check for replies whenever this contact's page is viewed
+  useEffect(() => {
+    const checkReplies = async () => {
+      try {
+        const res = await fetch(`/api/email/check-replies?contactId=${contactId}`)
+        const data = await res.json()
+        if (data.newReplies > 0) {
+          load()
+          reload()
+        }
+      } catch {
+        // Silent fail — reply checking is a passive enhancement, not critical path
+      }
+    }
+    checkReplies()
+  }, [contactId])
+
   const logInteraction = async (e) => {
     e.preventDefault()
     setLogging(true)

@@ -4,6 +4,7 @@ const NAV_ITEMS = [
   { key: 'dashboard', label: 'Pipeline', icon: '◈' },
   { key: 'contacts', label: 'All Contacts', icon: '☷' },
   { key: 'followups', label: 'Follow-Ups', icon: '◷' },
+  { key: 'analytics', label: 'Analytics', icon: '▤' },
   { key: 'import', label: 'Import CSV', icon: '↥' },
 ]
 
