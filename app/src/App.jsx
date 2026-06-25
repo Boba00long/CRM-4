@@ -64,7 +64,7 @@ export default function App() {
           />
         )}
         {view === 'import' && (
-          <ImportView reload={loadContacts} showToast={showToast} setView={setView} />
+          <ImportView contacts={contacts} reload={loadContacts} showToast={showToast} setView={setView} />
         )}
         {view === 'followups' && (
           <FollowUpsView contacts={contacts} loading={loading} openContact={openContact} />

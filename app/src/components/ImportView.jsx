@@ -50,7 +50,7 @@ function guessIndustry(row) {
   return ''
 }
 
-export default function ImportView({ reload, showToast, setView }) {
+export default function ImportView({ contacts, reload, showToast, setView }) {
   const [step, setStep] = useState('upload') // upload | map | preview | done
   const [rows, setRows] = useState([])
   const [headers, setHeaders] = useState([])
@@ -75,6 +75,12 @@ export default function ImportView({ reload, showToast, setView }) {
     })
   }
 
+  const existingEmails = new Set(
+    (contacts || [])
+      .map((c) => c.email?.trim().toLowerCase())
+      .filter(Boolean)
+  )
+
   const buildMappedRows = () => {
     return rows.map((row) => {
       const mapped = {}
@@ -92,16 +98,38 @@ export default function ImportView({ reload, showToast, setView }) {
     }).filter((r) => r.full_name && r.full_name.trim())
   }
 
+  const splitDuplicates = (mappedRows) => {
+    const seen = new Set(existingEmails)
+    const fresh = []
+    const duplicates = []
+    for (const row of mappedRows) {
+      const email = row.email?.trim().toLowerCase()
+      if (email && seen.has(email)) {
+        duplicates.push(row)
+      } else {
+        if (email) seen.add(email) // catch duplicates within the same CSV too
+        fresh.push(row)
+      }
+    }
+    return { fresh, duplicates }
+  }
+
   const handleImport = async () => {
     setImporting(true)
     const mappedRows = buildMappedRows()
-    const { data, error } = await supabase.from('contacts').insert(mappedRows).select()
+    const { fresh } = splitDuplicates(mappedRows)
+    const { data, error } = await supabase.from('contacts').insert(fresh).select()
     setImporting(false)
     if (error) {
       showToast('Import failed: ' + error.message, 'error')
       return
     }
-    setResults({ count: data.length, skipped: rows.length - mappedRows.length })
+    const { duplicates } = splitDuplicates(mappedRows)
+    setResults({
+      count: data.length,
+      skipped: rows.length - mappedRows.length,
+      duplicates: duplicates.length,
+    })
     setStep('done')
     reload()
   }
@@ -184,44 +212,63 @@ export default function ImportView({ reload, showToast, setView }) {
 
       {step === 'preview' && (
         <div>
-          <p style={{ fontSize: 13.5, color: 'var(--color-text-secondary)', marginBottom: 16 }}>
-            Preview of the first 5 contacts that will be imported — all start at "New" status:
-          </p>
-          <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                  {['Name', 'Company', 'Email', 'Industry (auto-tagged)'].map((h) => (
-                    <th key={h} style={thStyle}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {buildMappedRows().slice(0, 5).map((r, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td style={tdStyle}>{r.full_name}</td>
-                    <td style={tdStyle}>{r.company_name || '—'}</td>
-                    <td style={tdStyle}>{r.email || '—'}</td>
-                    <td style={tdStyle}>
-                      {r.company_industry ? (
-                        <span style={{ color: 'var(--color-gold)', fontSize: 12.5 }}>{r.company_industry}</span>
-                      ) : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 12 }}>
-            {buildMappedRows().length} contacts ready to import
-            {rows.length - buildMappedRows().length > 0 && ` (${rows.length - buildMappedRows().length} skipped — missing name)`}
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-            <button onClick={() => setStep('map')} style={secondaryBtnStyle}>Back</button>
-            <button onClick={handleImport} disabled={importing} style={primaryBtnStyle}>
-              {importing ? 'Importing…' : `Import ${buildMappedRows().length} Contacts`}
-            </button>
-          </div>
+          {(() => {
+            const mappedRows = buildMappedRows()
+            const { fresh, duplicates } = splitDuplicates(mappedRows)
+            return (
+              <>
+                <p style={{ fontSize: 13.5, color: 'var(--color-text-secondary)', marginBottom: 16 }}>
+                  Preview of the first 5 contacts that will be imported — all start at "New" status:
+                </p>
+                <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        {['Name', 'Company', 'Email', 'Industry (auto-tagged)', 'Status'].map((h) => (
+                          <th key={h} style={thStyle}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mappedRows.slice(0, 5).map((r, idx) => {
+                        const isDup = r.email && existingEmails.has(r.email.trim().toLowerCase())
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--color-border)', opacity: isDup ? 0.5 : 1 }}>
+                            <td style={tdStyle}>{r.full_name}</td>
+                            <td style={tdStyle}>{r.company_name || '—'}</td>
+                            <td style={tdStyle}>{r.email || '—'}</td>
+                            <td style={tdStyle}>
+                              {r.company_industry ? (
+                                <span style={{ color: 'var(--color-gold)', fontSize: 12.5 }}>{r.company_industry}</span>
+                              ) : '—'}
+                            </td>
+                            <td style={tdStyle}>
+                              {isDup ? (
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>Duplicate — will skip</span>
+                              ) : (
+                                <span style={{ color: 'var(--color-success)', fontSize: 12 }}>New</span>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 12 }}>
+                  {fresh.length} new contacts ready to import
+                  {duplicates.length > 0 && ` · ${duplicates.length} duplicate${duplicates.length === 1 ? '' : 's'} will be skipped (matching email already in CRM)`}
+                  {rows.length - mappedRows.length > 0 && ` · ${rows.length - mappedRows.length} skipped (missing name)`}
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                  <button onClick={() => setStep('map')} style={secondaryBtnStyle}>Back</button>
+                  <button onClick={handleImport} disabled={importing || fresh.length === 0} style={primaryBtnStyle}>
+                    {importing ? 'Importing…' : `Import ${fresh.length} New Contact${fresh.length === 1 ? '' : 's'}`}
+                  </button>
+                </div>
+              </>
+            )
+          })()}
         </div>
       )}
 
@@ -230,6 +277,11 @@ export default function ImportView({ reload, showToast, setView }) {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--color-success)', marginBottom: 8 }}>
             ✓ Imported {results.count} contacts
           </div>
+          {results.duplicates > 0 && (
+            <p style={{ color: 'var(--color-text-muted)', fontSize: 13.5 }}>
+              {results.duplicates} duplicate{results.duplicates === 1 ? '' : 's'} skipped (already in CRM)
+            </p>
+          )}
           {results.skipped > 0 && (
             <p style={{ color: 'var(--color-text-muted)', fontSize: 13.5 }}>{results.skipped} rows skipped (missing name)</p>
           )}

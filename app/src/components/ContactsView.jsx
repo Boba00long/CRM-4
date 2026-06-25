@@ -28,6 +28,8 @@ export default function ContactsView({ contacts, loading, openContact, reload, s
     return INDUSTRY_OPTIONS.filter((i) => set.has(i))
   }, [contacts])
 
+  const untaggedCount = useMemo(() => contacts.filter((c) => !c.company_industry).length, [contacts])
+
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
       const matchesSearch =
@@ -36,7 +38,12 @@ export default function ContactsView({ contacts, loading, openContact, reload, s
         c.company_name?.toLowerCase().includes(search.toLowerCase()) ||
         c.email?.toLowerCase().includes(search.toLowerCase())
       const matchesStatus = statusFilter === 'All' || c.status === statusFilter
-      const matchesIndustry = industryFilter === 'All' || c.company_industry === industryFilter
+      const matchesIndustry =
+        industryFilter === 'All'
+          ? true
+          : industryFilter === '__untagged__'
+          ? !c.company_industry
+          : c.company_industry === industryFilter
       return matchesSearch && matchesStatus && matchesIndustry
     })
   }, [contacts, search, statusFilter, industryFilter])
@@ -86,6 +93,9 @@ export default function ContactsView({ contacts, loading, openContact, reload, s
           {industriesPresent.map((i) => (
             <option key={i} value={i}>{i}</option>
           ))}
+          {untaggedCount > 0 && (
+            <option value="__untagged__">Untagged ({untaggedCount})</option>
+          )}
         </select>
       </div>
 
@@ -93,16 +103,16 @@ export default function ContactsView({ contacts, loading, openContact, reload, s
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-              {['Name', 'Company', 'Status', 'Sequence', 'Next Action', ''].map((h) => (
+              {['Name', 'Company', 'Industry', 'Status', 'Sequence', 'Next Action', ''].map((h) => (
                 <th key={h} style={thStyle}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} style={{ padding: 24, color: 'var(--color-text-muted)' }}>Loading…</td></tr>
+              <tr><td colSpan={7} style={{ padding: 24, color: 'var(--color-text-muted)' }}>Loading…</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={6} style={{ padding: 24, color: 'var(--color-text-muted)' }}>No contacts match.</td></tr>
+              <tr><td colSpan={7} style={{ padding: 24, color: 'var(--color-text-muted)' }}>No contacts match.</td></tr>
             ) : (
               filtered.map((c) => (
                 <tr
@@ -117,6 +127,36 @@ export default function ContactsView({ contacts, loading, openContact, reload, s
                     <div style={{ fontSize: 12.5, color: 'var(--color-text-muted)' }}>{c.title || '—'}</div>
                   </td>
                   <td style={tdStyle}>{c.company_name || '—'}</td>
+                  <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={c.company_industry || ''}
+                      onChange={async (e) => {
+                        const { error } = await supabase
+                          .from('contacts')
+                          .update({ company_industry: e.target.value || null, updated_at: new Date().toISOString() })
+                          .eq('id', c.id)
+                        if (error) {
+                          showToast('Failed to update industry: ' + error.message, 'error')
+                        } else {
+                          reload()
+                        }
+                      }}
+                      style={{
+                        background: c.company_industry ? 'var(--color-panel)' : 'rgba(248,113,113,0.08)',
+                        border: `1px solid ${c.company_industry ? 'var(--color-border)' : 'var(--color-danger)'}`,
+                        borderRadius: 'var(--radius-sm)',
+                        padding: '6px 8px',
+                        color: c.company_industry ? 'var(--color-text)' : 'var(--color-text-muted)',
+                        fontSize: 12.5,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="">— Untagged —</option>
+                      {INDUSTRY_OPTIONS.map((i) => (
+                        <option key={i} value={i}>{i}</option>
+                      ))}
+                    </select>
+                  </td>
                   <td style={tdStyle}>
                     <StatusBadge status={c.status} />
                   </td>
@@ -182,6 +222,22 @@ function AddContactModal({ onClose, onSaved, showToast }) {
     e.preventDefault()
     if (!form.full_name.trim()) return
     setSaving(true)
+
+    if (form.email?.trim()) {
+      const { data: existing } = await supabase
+        .from('contacts')
+        .select('id, full_name')
+        .ilike('email', form.email.trim())
+        .limit(1)
+        .maybeSingle()
+
+      if (existing) {
+        setSaving(false)
+        showToast(`A contact with this email already exists (${existing.full_name})`, 'error')
+        return
+      }
+    }
+
     const { error } = await supabase.from('contacts').insert([{ ...form, status: 'New', sequence_stage: 0 }])
     setSaving(false)
     if (error) {
