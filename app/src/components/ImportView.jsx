@@ -47,6 +47,8 @@ function guessIndustry(row) {
   if (/architect/.test(text)) return 'Architecture'
   if (/interior design/.test(text)) return 'Interior Design'
   if (/structural engineer/.test(text)) return 'Structural Engineering'
+  if (/lending|lender|loan|finance|renofi|heloc|renovation loan/.test(text)) return 'Remodeling Finance / Lending'
+  if (/franchise|franchisee|franchisor|build.out|buildout/.test(text)) return 'Franchise Development'
   return ''
 }
 

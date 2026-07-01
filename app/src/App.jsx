@@ -7,6 +7,7 @@ import ContactDetail from './components/ContactDetail'
 import ImportView from './components/ImportView'
 import FollowUpsView from './components/FollowUpsView'
 import AnalyticsView from './components/AnalyticsView'
+import WorkflowView from './components/WorkflowView'
 
 export default function App() {
   const [view, setView] = useState('dashboard')
@@ -41,7 +42,7 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar view={view} setView={setView} contactCount={contacts.length} />
+      <Sidebar view={view} setView={setView} contactCount={contacts.length} contacts={contacts} />
       <main style={{ flex: 1, padding: '40px 48px', maxWidth: 1280 }}>
         {view === 'dashboard' && (
           <Dashboard contacts={contacts} loading={loading} openContact={openContact} setView={setView} />
@@ -70,6 +71,14 @@ export default function App() {
           <FollowUpsView contacts={contacts} loading={loading} openContact={openContact} />
         )}
         {view === 'analytics' && <AnalyticsView />}
+        {view === 'workflow' && (
+          <WorkflowView
+            contacts={contacts}
+            openContact={openContact}
+            reload={loadContacts}
+            showToast={showToast}
+          />
+        )}
       </main>
       {toast && (
         <div

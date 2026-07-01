@@ -19,6 +19,8 @@ export const INDUSTRY_OPTIONS = [
   'Architecture',
   'Interior Design',
   'Structural Engineering',
+  'Remodeling Finance / Lending',
+  'Franchise Development',
   'Other',
 ]
 

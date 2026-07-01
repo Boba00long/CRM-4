@@ -1,15 +1,26 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Pipeline', icon: '◈' },
+  { key: 'workflow', label: 'Workflow', icon: '⟳' },
   { key: 'contacts', label: 'All Contacts', icon: '☷' },
   { key: 'followups', label: 'Follow-Ups', icon: '◷' },
   { key: 'analytics', label: 'Analytics', icon: '▤' },
   { key: 'import', label: 'Import CSV', icon: '↥' },
 ]
 
-export default function Sidebar({ view, setView, contactCount }) {
+export default function Sidebar({ view, setView, contactCount, contacts }) {
   const [gmailStatus, setGmailStatus] = useState({ loading: true, connected: false, email: null })
+
+  const dueTodayCount = useMemo(() => {
+    if (!contacts) return 0
+    const today = new Date(new Date().toDateString())
+    return contacts.filter((c) => {
+      if (c.status === 'Connected' || c.status === 'Closed') return false
+      if (!c.next_action_date) return false
+      return new Date(c.next_action_date + 'T00:00:00') <= today
+    }).length
+  }, [contacts])
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -96,6 +107,19 @@ export default function Sidebar({ view, setView, contactCount }) {
             {item.key === 'contacts' && (
               <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--color-text-muted)' }}>
                 {contactCount}
+              </span>
+            )}
+            {item.key === 'workflow' && dueTodayCount > 0 && (
+              <span style={{
+                marginLeft: 'auto',
+                fontSize: 11,
+                fontWeight: 700,
+                color: 'var(--color-bg)',
+                background: 'var(--color-gold)',
+                padding: '2px 7px',
+                borderRadius: 10,
+              }}>
+                {dueTodayCount}
               </span>
             )}
           </button>
