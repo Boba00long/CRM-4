@@ -238,7 +238,12 @@ function AddContactModal({ onClose, onSaved, showToast }) {
       }
     }
 
-    const { error } = await supabase.from('contacts').insert([{ ...form, status: 'New', sequence_stage: 0 }])
+    const { error } = await supabase.from('contacts').insert([{
+      ...form,
+      status: 'New',
+      sequence_stage: 0,
+      next_action_date: new Date().toISOString().split('T')[0]
+    }])
     setSaving(false)
     if (error) {
       showToast('Failed to add contact: ' + error.message, 'error')

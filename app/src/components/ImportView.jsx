@@ -96,6 +96,7 @@ export default function ImportView({ contacts, reload, showToast, setView }) {
       }
       mapped.status = 'New'
       mapped.sequence_stage = 0
+      mapped.next_action_date = new Date().toISOString().split('T')[0]
       return mapped
     }).filter((r) => r.full_name && r.full_name.trim())
   }
