@@ -12,6 +12,7 @@ const emptyForm = {
   company_website: '',
   company_industry: '',
   company_size: '',
+  location: '',
   source: '',
   ai_summary: '',
   notes: '',
@@ -281,6 +282,9 @@ function AddContactModal({ onClose, onSaved, showToast }) {
           </Row>
           <Row>
             <Field label="Company Size"><input placeholder="e.g. 11-50" value={form.company_size} onChange={set('company_size')} style={inputStyle()} /></Field>
+          </Row>
+          <Row>
+            <Field label="Location"><input placeholder="e.g. Lake Forest, CA" value={form.location} onChange={set('location')} style={inputStyle()} /></Field>
             <Field label="Source">
               <select value={form.source} onChange={set('source')} style={inputStyle()}>
                 <option value="">Select…</option>

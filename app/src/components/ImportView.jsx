@@ -16,6 +16,7 @@ const FIELD_OPTIONS = [
   { key: 'company_website', label: 'Company Website' },
   { key: 'company_industry', label: 'Industry' },
   { key: 'company_size', label: 'Company Size' },
+  { key: 'location', label: 'Location' },
   { key: 'source', label: 'Source' },
   { key: 'ai_summary', label: 'AI Summary / LinkedIn Notes' },
   { key: 'notes', label: 'Notes' },
@@ -221,15 +222,15 @@ export default function ImportView({ contacts, reload, showToast, setView }) {
             <button onClick={() => setStep('upload')} style={secondaryBtnStyle}>Back</button>
             <button
               onClick={() => setStep('preview')}
-              disabled={!Object.values(mapping).includes('full_name')}
+              disabled={!Object.values(mapping).some(v => v === 'full_name' || v === 'first_name' || v === 'last_name')}
               style={primaryBtnStyle}
             >
               Continue
             </button>
           </div>
-          {!Object.values(mapping).includes('full_name') && (
+          {!Object.values(mapping).some(v => v === 'full_name' || v === 'first_name' || v === 'last_name') && (
             <p style={{ color: 'var(--color-danger)', fontSize: 13, marginTop: 8 }}>
-              You need to map at least one column to "Full Name" to continue.
+              You need to map at least one column to "Full Name", "First Name", or "Last Name" to continue.
             </p>
           )}
         </div>

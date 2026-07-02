@@ -151,6 +151,7 @@ export default function ContactDetail({ contactId, onBack, reload, showToast }) 
                 <InfoRow label="Title" value={contact.title} />
                 <InfoRow label="Website" value={contact.company_website} link={contact.company_website} />
                 <InfoRow label="Industry" value={contact.company_industry} />
+                <InfoRow label="Location" value={contact.location} />
                 <InfoRow label="Company Size" value={contact.company_size} />
                 <InfoRow label="Source" value={contact.source} />
                 <InfoRow label="Next Action" value={formatDate(contact.next_action_date)} />
@@ -380,6 +381,7 @@ function EditForm({ contact, onSave }) {
       <LabeledInput label="Title" value={form.title} onChange={set('title')} />
       <LabeledInput label="Website" value={form.company_website} onChange={set('company_website')} />
       <LabeledInput label="Industry" value={form.company_industry} onChange={set('company_industry')} />
+      <LabeledInput label="Location" value={form.location || ''} onChange={set('location')} />
       <LabeledInput label="Company Size" value={form.company_size} onChange={set('company_size')} />
       <LabeledInput label="Next Action Date" type="date" value={form.next_action_date || ''} onChange={set('next_action_date')} />
       <button
@@ -391,6 +393,7 @@ function EditForm({ contact, onSave }) {
             company_website: form.company_website,
             company_industry: form.company_industry,
             company_size: form.company_size,
+            location: form.location || null,
             next_action_date: form.next_action_date || null,
           })
         }
