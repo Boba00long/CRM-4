@@ -5,9 +5,12 @@ import { INDUSTRY_OPTIONS } from '../lib/constants'
 
 const FIELD_OPTIONS = [
   { key: '', label: '— Skip this column —' },
-  { key: 'full_name', label: 'Full Name' },
+  { key: 'full_name', label: 'Full Name (single field)' },
+  { key: 'first_name', label: 'First Name' },
+  { key: 'last_name', label: 'Last Name' },
   { key: 'title', label: 'Title' },
-  { key: 'email', label: 'Email' },
+  { key: 'email', label: 'Email (primary)' },
+  { key: 'email_fallback', label: 'Email (fallback if primary empty)' },
   { key: 'phone', label: 'Phone' },
   { key: 'company_name', label: 'Company Name' },
   { key: 'company_website', label: 'Company Website' },
@@ -23,16 +26,21 @@ function guessMapping(headers) {
   const mapping = {}
   headers.forEach((h) => {
     const norm = h.toLowerCase().replace(/[^a-z]/g, '')
-    if (/^(name|fullname|contact)$/.test(norm)) mapping[h] = 'full_name'
+    if (/^(fullname|name|contact)$/.test(norm)) mapping[h] = 'full_name'
+    else if (/^(firstname|fname|givenname)$/.test(norm)) mapping[h] = 'first_name'
+    else if (/^(lastname|lname|surname|familyname)$/.test(norm)) mapping[h] = 'last_name'
     else if (/^(title|jobtitle|role|position)$/.test(norm)) mapping[h] = 'title'
+    else if (/^(workemail|businessemail|worke?mail|email1|primaryemail)$/.test(norm)) mapping[h] = 'email'
+    else if (/^(personalemail|email2|secondaryemail|alternativeemail)$/.test(norm)) mapping[h] = 'email_fallback'
     else if (/^email/.test(norm)) mapping[h] = 'email'
-    else if (/^(phone|phonenumber|mobile|cell)$/.test(norm)) mapping[h] = 'phone'
+    else if (/^(phone|phonenumber|mobile|cell|phone1)$/.test(norm)) mapping[h] = 'phone'
+    else if (/^phone2$/.test(norm)) mapping[h] = '' // skip phone2 by default
     else if (/^(company|companyname|organization|org)$/.test(norm)) mapping[h] = 'company_name'
     else if (/^(website|companywebsite|url|domain)$/.test(norm)) mapping[h] = 'company_website'
     else if (/^(industry|sector|companytype)$/.test(norm)) mapping[h] = 'company_industry'
     else if (/^(size|companysize|employees)$/.test(norm)) mapping[h] = 'company_size'
-    else if (/^(source|leadsource)$/.test(norm)) mapping[h] = 'source'
-    else if (/^(summary|aisummary|linkedin|about)$/.test(norm)) mapping[h] = 'ai_summary'
+    else if (/^(source|leadsource|linkedinurl)$/.test(norm)) mapping[h] = 'source'
+    else if (/^(summary|aisummary|linkedin|about|headline|experience)$/.test(norm)) mapping[h] = 'ai_summary'
     else if (/^notes?$/.test(norm)) mapping[h] = 'notes'
     else mapping[h] = ''
   })
@@ -90,6 +98,20 @@ export default function ImportView({ contacts, reload, showToast, setView }) {
         const field = mapping[h]
         if (field) mapped[field] = row[h]
       })
+
+      // Concatenate first + last name if separate columns were mapped
+      if (!mapped.full_name && (mapped.first_name || mapped.last_name)) {
+        mapped.full_name = [mapped.first_name, mapped.last_name].filter(Boolean).join(' ').trim()
+      }
+      delete mapped.first_name
+      delete mapped.last_name
+
+      // Use fallback email if primary is empty
+      if (!mapped.email?.trim() && mapped.email_fallback?.trim()) {
+        mapped.email = mapped.email_fallback.trim()
+      }
+      delete mapped.email_fallback
+
       if (!mapped.company_industry) {
         const guessed = guessIndustry(mapped)
         if (guessed) mapped.company_industry = guessed
