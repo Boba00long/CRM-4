@@ -49,6 +49,25 @@ export default function WorkflowView({ contacts, openContact, reload, showToast 
       .sort((a, b) => new Date(a.next_action_date) - new Date(b.next_action_date))
   }, [contacts])
 
+  const later = useMemo(() => {
+    const today = new Date(new Date().toDateString())
+    return contacts
+      .filter((c) => {
+        if (c.status === 'Connected' || c.status === 'Closed') return false
+        if (!c.next_action_date) return false
+        const d = new Date(c.next_action_date + 'T00:00:00')
+        const diff = Math.ceil((d - today) / (1000 * 60 * 60 * 24))
+        return diff > 7
+      })
+      .sort((a, b) => new Date(a.next_action_date) - new Date(b.next_action_date))
+  }, [contacts])
+
+  const unscheduled = useMemo(() => {
+    return contacts.filter(
+      (c) => c.status !== 'Connected' && c.status !== 'Closed' && !c.next_action_date
+    )
+  }, [contacts])
+
   const draftEmail = async (contact) => {
     const touchNumber = Math.min((contact.sequence_stage || 0) + 1, 5)
     setDraftingId(contact.id)
@@ -157,8 +176,81 @@ export default function WorkflowView({ contacts, openContact, reload, showToast 
           compact
         />
       </div>
+
+      {later.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <h3 style={{ fontSize: 13, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 14 }}>
+            Later ({later.length})
+          </h3>
+          <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+            {later.map((c, idx) => (
+              <div
+                key={c.id}
+                onClick={() => onOpenSafe(openContact, c.id)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 18px',
+                  borderBottom: idx < later.length - 1 ? '1px solid var(--color-border)' : 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <div>
+                  <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-paper)' }}>{c.full_name}</span>
+                  <span style={{ fontSize: 12.5, color: 'var(--color-text-muted)', marginLeft: 10 }}>
+                    {c.company_name || '—'} · Touch {Math.min((c.sequence_stage || 0) + 1, 5)}
+                  </span>
+                </div>
+                <span style={{ fontSize: 12.5, color: 'var(--color-text-secondary)' }}>
+                  {new Date(c.next_action_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {unscheduled.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <h3 style={{ fontSize: 13, color: 'var(--color-danger)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 14 }}>
+            Not Scheduled ({unscheduled.length})
+          </h3>
+          <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: -6, marginBottom: 12 }}>
+            These active contacts have no next action date — open one and set a date, or they'll never appear in your queue.
+          </p>
+          <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+            {unscheduled.map((c, idx) => (
+              <div
+                key={c.id}
+                onClick={() => onOpenSafe(openContact, c.id)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 18px',
+                  borderBottom: idx < unscheduled.length - 1 ? '1px solid var(--color-border)' : 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <div>
+                  <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-paper)' }}>{c.full_name}</span>
+                  <span style={{ fontSize: 12.5, color: 'var(--color-text-muted)', marginLeft: 10 }}>
+                    {c.company_name || '—'}
+                  </span>
+                </div>
+                <span style={{ fontSize: 12.5, color: 'var(--color-text-muted)' }}>Set a date →</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
+}
+
+function onOpenSafe(openContact, id) {
+  if (typeof openContact === 'function') openContact(id)
 }
 
 function Section({ title, color, items, emptyText, compact, draftingId, drafts, sending, onDraft, onSend, onDismiss, onOpen, setDrafts, setDraftingId }) {

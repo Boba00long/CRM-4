@@ -5,7 +5,6 @@ import Dashboard from './components/Dashboard'
 import ContactsView from './components/ContactsView'
 import ContactDetail from './components/ContactDetail'
 import ImportView from './components/ImportView'
-import FollowUpsView from './components/FollowUpsView'
 import AnalyticsView from './components/AnalyticsView'
 import WorkflowView from './components/WorkflowView'
 
@@ -66,9 +65,6 @@ export default function App() {
         )}
         {view === 'import' && (
           <ImportView contacts={contacts} reload={loadContacts} showToast={showToast} setView={setView} />
-        )}
-        {view === 'followups' && (
-          <FollowUpsView contacts={contacts} loading={loading} openContact={openContact} />
         )}
         {view === 'analytics' && <AnalyticsView />}
         {view === 'workflow' && (

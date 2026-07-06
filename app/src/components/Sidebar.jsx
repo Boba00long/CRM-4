@@ -4,9 +4,8 @@ const NAV_ITEMS = [
   { key: 'dashboard', label: 'Pipeline', icon: '◈' },
   { key: 'workflow', label: 'Workflow', icon: '⟳' },
   { key: 'contacts', label: 'All Contacts', icon: '☷' },
-  { key: 'followups', label: 'Follow-Ups', icon: '◷' },
   { key: 'analytics', label: 'Analytics', icon: '▤' },
-  { key: 'import', label: 'Import CSV', icon: '↥' },
+  { key: 'import', label: 'Import Leads', icon: '↥' },
 ]
 
 export default function Sidebar({ view, setView, contactCount, contacts }) {

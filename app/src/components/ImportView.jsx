@@ -68,6 +68,33 @@ export default function ImportView({ contacts, reload, showToast, setView }) {
   const [mapping, setMapping] = useState({})
   const [importing, setImporting] = useState(false)
   const [results, setResults] = useState(null)
+  const [linkedinUrl, setLinkedinUrl] = useState('')
+  const [fetchingLinkedin, setFetchingLinkedin] = useState(false)
+
+  const importFromLinkedin = async () => {
+    if (!linkedinUrl.trim()) return
+    setFetchingLinkedin(true)
+    try {
+      const res = await fetch('/api/leads/contactout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ linkedinUrl: linkedinUrl.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Import failed')
+      showToast(
+        data.hadEmail
+          ? `Added ${data.contact.full_name} with email — due for Touch 1 today`
+          : `Added ${data.contact.full_name} — no email found, add one manually`,
+        data.hadEmail ? 'success' : 'error'
+      )
+      setLinkedinUrl('')
+      reload()
+    } catch (err) {
+      showToast(err.message, 'error')
+    }
+    setFetchingLinkedin(false)
+  }
 
   const handleFile = (file) => {
     if (!file) return
@@ -168,6 +195,62 @@ export default function ImportView({ contacts, reload, showToast, setView }) {
       <p style={{ color: 'var(--color-text-secondary)', marginTop: 6, marginBottom: 28, fontSize: 14.5 }}>
         Upload a CSV of leads — we'll map the columns and auto-tag industry where we can.
       </p>
+
+      {step === 'upload' && (
+        <div
+          style={{
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-gold)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '20px 24px',
+            marginBottom: 20,
+          }}
+        >
+          <h3 style={{ fontSize: 13, color: 'var(--color-gold)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 0, marginBottom: 6 }}>
+            Quick Import from LinkedIn
+          </h3>
+          <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 0, marginBottom: 14 }}>
+            Paste a LinkedIn profile URL — ContactOut finds their email and details, and they're added ready for Touch 1 today.
+          </p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <input
+              value={linkedinUrl}
+              onChange={(e) => setLinkedinUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !fetchingLinkedin && importFromLinkedin()}
+              placeholder="https://www.linkedin.com/in/example-person/"
+              style={{
+                flex: 1,
+                background: 'var(--color-panel)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '10px 14px',
+                color: 'var(--color-text)',
+                fontSize: 14,
+                fontFamily: 'var(--font-body)',
+              }}
+            />
+            <button
+              onClick={importFromLinkedin}
+              disabled={fetchingLinkedin || !linkedinUrl.trim()}
+              style={{
+                background: 'var(--color-gold)',
+                color: 'var(--color-bg)',
+                border: 'none',
+                padding: '10px 22px',
+                borderRadius: 'var(--radius-sm)',
+                fontWeight: 600,
+                fontSize: 13.5,
+                cursor: fetchingLinkedin ? 'wait' : 'pointer',
+                opacity: fetchingLinkedin || !linkedinUrl.trim() ? 0.6 : 1,
+                fontFamily: 'var(--font-body)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {fetchingLinkedin ? 'Fetching…' : 'Fetch & Add'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {step === 'upload' && (
         <div

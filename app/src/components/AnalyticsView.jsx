@@ -9,6 +9,7 @@ const WINDOWS = [
 
 export default function AnalyticsView() {
   const [interactions, setInteractions] = useState([])
+  const [contactIndustry, setContactIndustry] = useState({})
   const [loading, setLoading] = useState(true)
   const [activeWindow, setActiveWindow] = useState('7d')
 
@@ -18,11 +19,19 @@ export default function AnalyticsView() {
       // Pull everything within the last 30 days — covers all three window options
       const since = new Date()
       since.setDate(since.getDate() - 30)
-      const { data, error } = await supabase
-        .from('interactions')
-        .select('type, occurred_at, replied_at')
-        .gte('occurred_at', since.toISOString())
-      if (!error) setInteractions(data || [])
+      const [{ data: ints, error: intErr }, { data: cts, error: ctErr }] = await Promise.all([
+        supabase
+          .from('interactions')
+          .select('type, occurred_at, replied_at, contact_id')
+          .gte('occurred_at', since.toISOString()),
+        supabase.from('contacts').select('id, company_industry'),
+      ])
+      if (!intErr) setInteractions(ints || [])
+      if (!ctErr) {
+        const map = {}
+        for (const c of cts || []) map[c.id] = c.company_industry || 'Untagged'
+        setContactIndustry(map)
+      }
       setLoading(false)
     }
     load()
@@ -80,6 +89,34 @@ export default function AnalyticsView() {
   }, [interactions, activeWindow])
 
   const maxDayTotal = Math.max(1, ...dailyBreakdown.map((d) => d.total))
+
+  // Per-industry breakdown for the selected window
+  const industryStats = useMemo(() => {
+    const windowConfig = WINDOWS.find((w) => w.key === activeWindow)
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - windowConfig.days)
+
+    const byIndustry = {}
+    for (const i of interactions) {
+      if (new Date(i.occurred_at) < cutoff) continue
+      const industry = contactIndustry[i.contact_id] || 'Untagged'
+      if (!byIndustry[industry]) {
+        byIndustry[industry] = { industry, touches: 0, emails: 0, replies: 0 }
+      }
+      byIndustry[industry].touches += 1
+      if (i.type === 'Email') {
+        byIndustry[industry].emails += 1
+        if (i.replied_at) byIndustry[industry].replies += 1
+      }
+    }
+
+    return Object.values(byIndustry)
+      .map((row) => ({
+        ...row,
+        replyRate: row.emails > 0 ? (row.replies / row.emails) * 100 : 0,
+      }))
+      .sort((a, b) => b.emails - a.emails)
+  }, [interactions, contactIndustry, activeWindow])
 
   return (
     <div>
@@ -168,6 +205,40 @@ export default function AnalyticsView() {
                 </div>
               ))}
             </div>
+          </div>
+          <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 24, marginTop: 24 }}>
+            <h3 style={{ fontSize: 13, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 0, marginBottom: 6 }}>
+              Reply Rate by Industry
+            </h3>
+            <p style={{ fontSize: 12.5, color: 'var(--color-text-muted)', marginTop: 0, marginBottom: 16 }}>
+              Which audiences are actually responding — use this to decide where your outreach time goes.
+            </p>
+            {industryStats.length === 0 ? (
+              <p style={{ color: 'var(--color-text-muted)', fontSize: 14 }}>No activity in this window yet.</p>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    {['Industry', 'Emails Sent', 'Replies', 'Reply Rate', 'All Touches'].map((h, i) => (
+                      <th key={h} style={{ padding: '8px 10px', textAlign: i === 0 ? 'left' : 'right', fontSize: 11.5, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {industryStats.map((row) => (
+                    <tr key={row.industry} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td style={{ padding: '10px', fontSize: 13.5, color: 'var(--color-paper)', fontWeight: 600 }}>{row.industry}</td>
+                      <td style={{ padding: '10px', fontSize: 13.5, color: 'var(--color-text)', textAlign: 'right' }}>{row.emails}</td>
+                      <td style={{ padding: '10px', fontSize: 13.5, color: 'var(--color-text)', textAlign: 'right' }}>{row.replies}</td>
+                      <td style={{ padding: '10px', fontSize: 13.5, textAlign: 'right', fontWeight: 700, color: row.replyRate > 0 ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
+                        {row.emails > 0 ? `${row.replyRate.toFixed(0)}%` : '—'}
+                      </td>
+                      <td style={{ padding: '10px', fontSize: 13.5, color: 'var(--color-text-muted)', textAlign: 'right' }}>{row.touches}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </>
       )}
