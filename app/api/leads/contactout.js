@@ -10,6 +10,17 @@ function first(val) {
   return ''
 }
 
+// Derive a human name from the LinkedIn URL slug, e.g. /in/doris-bolton-b495628b -> "Doris Bolton"
+function nameFromSlug(url) {
+  const m = url.match(/linkedin\.com\/in\/([^/?#]+)/i)
+  if (!m) return ''
+  const parts = decodeURIComponent(m[1])
+    .split('-')
+    .filter((s) => s && !/\d/.test(s)) // drop ID-looking segments containing digits
+  if (parts.length === 0) return ''
+  return parts.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })
@@ -50,23 +61,31 @@ export default async function handler(req, res) {
       return
     }
 
-    // ContactOut response shapes vary slightly; handle the common ones defensively
-    const p = data.profile || data.data || data
-
-    const fullName =
-      first(p.full_name) ||
-      [first(p.first_name), first(p.last_name)].filter(Boolean).join(' ').trim() ||
-      first(p.name)
-
-    if (!fullName) {
-      res.status(404).json({ error: 'No profile data found for that LinkedIn URL' })
+    // ContactOut sometimes returns errors inside a 200 body
+    if (data?.status_code && data.status_code >= 400) {
+      res.status(502).json({ error: `ContactOut: ${data.message || 'profile not found (' + data.status_code + ')'}` })
       return
     }
+
+    // ContactOut response shapes vary slightly; handle the common ones defensively
+    const p = data.profile || data.data || data
 
     const workEmail = first(p.work_email) || first(p.work_emails)
     const personalEmail = first(p.personal_email) || first(p.personal_emails)
     const anyEmail = first(p.email) || first(p.emails)
     const email = (workEmail || personalEmail || anyEmail || '').toLowerCase()
+
+    const fullName =
+      first(p.full_name) ||
+      [first(p.first_name), first(p.last_name)].filter(Boolean).join(' ').trim() ||
+      first(p.name) ||
+      nameFromSlug(cleanUrl)
+
+    // Only give up if we found neither a name nor an email
+    if (!fullName && !email) {
+      res.status(404).json({ error: 'ContactOut returned no usable data for that profile (no name or email found)' })
+      return
+    }
 
     const companyName =
       (p.company && typeof p.company === 'object' ? first(p.company.name) : first(p.company)) ||
@@ -93,7 +112,7 @@ export default async function handler(req, res) {
     }
 
     const contact = {
-      full_name: fullName,
+      full_name: fullName || email.split('@')[0],
       title: first(p.title) || first(p.headline),
       email: email || null,
       phone: first(p.phone) || first(p.phones) || null,
