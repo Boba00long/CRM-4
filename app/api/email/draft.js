@@ -52,7 +52,15 @@ ${industryValue}
 Touch number: ${touchNumber} of 5
 Context for this touch: ${touchContext[touchNumber] || touchContext[5]}
 
-Write ONLY the email body (no subject line, no "Dear X" salutation — start directly with the opening line). Sign off as Josh Pinkas, RIA Group Construction. Keep the tone warm, professional, and human — not corporate or templated-sounding. Make it feel personally written, not mass-blasted. 2-4 short paragraphs max.
+Write ONLY the email body (no subject line, no "Dear X" salutation — start directly with the opening line). End with EXACTLY this signature block and nothing else after it:
+
+Josh Pinkas
+RIA Group Construction
+714-402-2444
+josh@riagroupconstruction.com
+riagroupconstruction.com
+
+Keep the tone warm, professional, and human — not corporate or templated-sounding. Make it feel personally written, not mass-blasted. 2-4 short paragraphs max.
 
 Also provide a suggested subject line on the very first line in this format:
 SUBJECT: [your suggested subject line here]
