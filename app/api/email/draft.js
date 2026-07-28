@@ -17,11 +17,11 @@ export default async function handler(req, res) {
   const title = contact.title || ''
 
   const touchContext = {
-    1: `This is the very first touchpoint. Introduce RIA Group Construction warmly and professionally. Mention that RIA Group is a luxury residential and commercial construction and remodeling company serving Orange County and Southern California. The goal is to plant a seed — introduce yourself, mention what you do, and express genuine interest in connecting. Keep it short, friendly, and non-pushy. Do NOT ask for a meeting yet. End with something low-commitment like "would love to connect when the timing is right."`,
-    2: `This is the first follow-up, sent 4 days after the initial email. Reference that you reached out recently. Add a brief value-add — mention a specific strength of RIA Group relevant to their industry (e.g. for property managers: minimal disruption to tenants, fast turnaround; for architects/designers: collaborative process, clean execution; for brokers: adding value to listings through renovation). Lightly nudge toward a call or brief meeting.`,
-    3: `This is the second follow-up, sent 10 days after the previous email. Keep it very brief — 3-4 sentences max. Acknowledge they're busy, restate your value prop in one sentence, and make a direct but easy ask: "Would a quick 15-minute call work sometime this week or next?"`,
-    4: `This is the third follow-up, sent 18 days after the previous email. Be direct and confident. Mention you've reached out a couple of times and you genuinely believe there's an opportunity to work together or add value. Make a clear, specific ask — suggest a specific type of meeting (coffee, quick Zoom, phone call) and give them an easy out if timing isn't right.`,
-    5: `This is the final follow-up in the sequence, sent 28 days after the previous email. Keep it short and gracious. Let them know this is your last follow-up for now — no pressure. Leave the door open for future collaboration. Wish them well. This should feel human and genuine, not automated.`,
+    1: `First email. Introduce yourself in ONE short line: a general contractor based in Orange County doing commercial and residential construction. Add ONE short line connecting to their world (use the industry context lightly). Then ask: "Do you have time for a quick call to introduce myself?" That's the whole email.`,
+    2: `Short follow-up, 4 days later. One line referencing you reached out last week, one line of value relevant to their industry, then ask again for a quick call. 3 sentences max.`,
+    3: `Very short follow-up. Acknowledge they're busy in one line, then a simple direct ask: would a quick 10-15 minute call work this week or next? 2-3 sentences max.`,
+    4: `Short and confident. You've reached out a few times and believe there's a real fit. Suggest a specific option: a quick call or coffee. Give an easy out if timing is bad. 3 sentences max.`,
+    5: `Final short note. Gracious, no pressure — this is your last follow-up for now, door stays open, wish them well. 2-3 sentences max.`,
   }
 
   const industryContext = {
@@ -52,7 +52,12 @@ ${industryValue}
 Touch number: ${touchNumber} of 5
 Context for this touch: ${touchContext[touchNumber] || touchContext[5]}
 
-Write ONLY the email body (no subject line, no "Dear X" salutation — start directly with the opening line). End with EXACTLY this signature block and nothing else after it:
+Write ONLY the email body. STRICT FORMAT RULES:
+- Start with exactly: "Hello ${name}," on its own line
+- Total body length: 2-4 short sentences after the greeting. Never more. Short and clean beats clever.
+- Plain, direct, human language — how a busy contractor writes, not a marketer. No fluff like "I hope this finds you well", no "I came across your work", no buzzwords.
+- Use the industry context for at most one short clause — don't lecture them about their own industry.
+- End with EXACTLY this signature block and nothing else after it:
 
 Josh Pinkas
 RIA Group Construction
@@ -60,9 +65,7 @@ RIA Group Construction
 josh@riagroupconstruction.com
 riagroupconstruction.com
 
-Keep the tone warm, professional, and human — not corporate or templated-sounding. Make it feel personally written, not mass-blasted. 2-4 short paragraphs max.
-
-Also provide a suggested subject line on the very first line in this format:
+Also provide a suggested subject line on the very first line in this format (keep the subject short and plain too, 4-7 words):
 SUBJECT: [your suggested subject line here]
 
 Then a blank line, then the email body.`
