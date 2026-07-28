@@ -107,14 +107,17 @@ export default async function handler(req, res) {
 }
 
 function buildRawMessage({ to, subject, htmlBody }) {
+  // RFC 2047 encoded-word: makes any characters (em dashes, accents, etc.) safe in the Subject header.
+  // Without this, non-ASCII characters arrive as mojibake like "Ã¢Â€Â""
+  const encodedSubject = `=?UTF-8?B?${Buffer.from(subject, 'utf-8').toString('base64')}?=`
   const messageParts = [
     `To: ${to}`,
     'Content-Type: text/html; charset=utf-8',
     'MIME-Version: 1.0',
-    `Subject: ${subject}`,
+    `Subject: ${encodedSubject}`,
     '',
     htmlBody,
   ]
   const message = messageParts.join('\n')
-  return Buffer.from(message).toString('base64url')
+  return Buffer.from(message, 'utf-8').toString('base64url')
 }
